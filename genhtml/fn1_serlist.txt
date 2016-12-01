@@ -1,0 +1,14 @@
+ 검색항목 	 DIR 	 프로그램ID 	 줄번호 	 검색내용 	 메소드ID 	 인자위치 	 연관검색값 	 Level 
+PORT	rmi/activation	Activatable.java	346	return exportObject(obj, location, data, restart, port, null, null);	exportObject	2	exportObject	1
+PORT	rmi/activation	Activatable.java	346	return exportObject(obj, location, data, restart, port, null, null);	exportObject	3	exportObject	1
+PORT	rmi/activation	Activatable.java	447	exportObject(obj, id, port, csf, ssf);	exportObject	3	exportObject	1
+PORT	rmi/activation	Activatable.java	515	return exportObject(obj, new ActivatableServerRef(id, port, csf, ssf));	ActivatableServerRef	1	exportObject	1
+PORT	rmi/activation	Activatable.java	515	return exportObject(obj, new ActivatableServerRef(id, port, csf, ssf));	ActivatableServerRef	2	exportObject	1
+PORT	rmi/registry	LocateRegistry.java	120	getRegistry(String host, int port) throws RemoteException {			getRegistry	1
+PORT	rmi/registry	LocateRegistry.java	123	return getRegistry(host, port, null);	getRegistry	2	getRegistry	1
+PORT	rmi/registry	LocateRegistry.java	144	getRegistry(String host, int port, RMIClientSocketFactory csf) throws RemoteException {			getRegistry	1
+PORT	rmi/registry	LocateRegistry.java	178	new TCPEndpoint(host, port, csf, null),	TCPEndpoint	2	getRegistry	1
+PORT	rmi/server	UnicastRemoteObject.java	249	exportObject(Remote obj, int port) throws RemoteException {			exportObject	1
+PORT	rmi/server	UnicastRemoteObject.java	267	exportObject(Remote obj, int port, RMIClientSocketFactory csf, RMIServerSocketFactory ssf) throws RemoteException {			exportObject	1
+PORT	rmi/server	UnicastRemoteObject.java	303	exportObject(Remote obj, UnicastServerRef sref) throws RemoteException {			exportObject	1
+PASS	src	Test27_Ex10.java	21	registerMember(String name, String id, String pass, String email){			registerMember	1

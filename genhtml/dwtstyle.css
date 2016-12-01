@@ -1,0 +1,21 @@
+body { font-family: ¸¼Àº°íµñ, Arial, sans-serif; background-color: #FFFFFF; color:#000000 }
+
+h1 { font-size: 145% }
+th {font-family: ¸¼Àº°íµñ; font-size: 90%}
+td {font-family: ¸¼Àº°íµñ; font-size: 90%; vertical-align:top }
+
+.TableHeadingColor     { background: #CCCCFF; color:#000000 } 
+.TableSubHeadingColor  { background: #EEEEFF; color:#000000 } 
+.TableRowColor         { background: #FFFFFF; color:#000000 } 
+
+.FrameTitleFont   { font-size: 100%; font-family: ¸¼Àº°íµñ, Arial, sans-serif; color:olive }
+.FrameHeadingFont { font-size:  90%; font-family: ¸¼Àº°íµñ, Arial, sans-serif; color:#000000 }
+.FrameItemFont    { font-size:  90%; font-family: ¸¼Àº°íµñ, Arial, sans-serif; color:#000000 }
+
+.NavBarCell1    { background-color:#EEEEFF; color:#000000} 
+.NavBarCell1Rev { background-color:#00008B; color:#FFFFFF} 
+.NavBarFont1    { font-family: ¸¼Àº°íµñ, Helvetica, sans-serif; color:#000000;color:#000000;}
+.NavBarFont1Rev { font-family: ¸¼Àº°íµñ, Helvetica, sans-serif; color:#FFFFFF;color:#FFFFFF;}
+
+.NavBarCell2    { font-family: ¸¼Àº°íµñ, Helvetica, sans-serif; background-color:#FFFFFF; color:#000000}
+.NavBarCell3    { font-family: ¸¼Àº°íµñ, Helvetica, sans-serif; background-color:#FFFFFF; color:#000000}
