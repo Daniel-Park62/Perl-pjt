@@ -1,0 +1,119 @@
+genisoimage -r -J -o test1.iso /boot
+ll
+mkdir /media
+ls /media
+mkdir /media/iso
+mount -o loop ./test1.iso /media/iso
+
+
+
+
+리부팅없이 추가된 장치 인식
+echo "- - -" > /sys/class/scsi_host/host0/scan
+
+리부팅없이 장치제거
+echo 1 > /sys/class/scsi_host/host0/device/target0:0:2/0:0:2:0/delete
+
+ 
+ << raid 구성 >>
+  
+mdadm --create /dev/md9 --level=linear --raid-devices=2 /dev/sdb1 /dev/sdc1
+mdadm --create /dev/md0 --level=0 --raid-devices=2 /dev/sdd1 /dev/sde1
+mdadm --create /dev/md1 --level=1 --raid-devices=2 /dev/sdf1 /dev/sdg1
+mdadm --create /dev/md5 --level=5 --raid-devices=3 /dev/sdh1 /dev/sdi1 /dev/sdj1
+
+
+mkfs -t xfs /dev/md9
+mkfs -t xfs /dev/md0
+mkfs -t xfs /dev/md1
+mkfs -t xfs /dev/md5
+
+
+mkdir /raidL /raid0 /raid1 /raid5
+
+mount /dev/md9 /raidL
+mount /dev/md0 /raid0
+mount /dev/md1 /raid1
+mount /dev/md5 /raid5
+
+
+<< /etc/fstab >>
+/dev/md9 /raidL xfs     defaults        1 2
+/dev/md0 /raid0 xfs     defaults        1 2
+/dev/md1 /raid1 xfs     defaults        1 2
+/dev/md5 /raid5 xfs     defaults        1 2
+--------------
+cp /boot/initramfs-0-rescue-4404cb32c1f346b3bee86061aa3f6f80.img /raidL
+cp /boot/initramfs-0-rescue-4404cb32c1f346b3bee86061aa3f6f80.img /raid0
+cp /boot/initramfs-0-rescue-4404cb32c1f346b3bee86061aa3f6f80.img /raid1
+cp /boot/initramfs-0-rescue-4404cb32c1f346b3bee86061aa3f6f80.img /raid5
+
+mdadm --assemble -scan <- 다시
+
+<raid 제거>
+umount /dev/md9
+cat /proc/mdstat
+mdadm --stop /dev/md9
+mdadm --zero-superblock /dev/sdb1 <-- 확인된 장치를 
+
+mdadm --zero-superblock /dev/sdc1
+mdadm --zero-superblock /dev/sdf1
+mdadm --zero-superblock /dev/sdd1
+mdadm --zero-superblock /dev/sdg1
+mdadm --zero-superblock /dev/sdh1
+
+
+blkid
+
+ mount /dev/myVG/myLG1 /ext4
+ mount /dev/myVG/myLG2 /xfsdir
+
+사이즈 증가
+resize2fs - ext2/ext3/ext4 file system resizer (online 중 가능 )
+xfs_growfs
+
+사이즈 축소 
+resize2fs - ext2/ext3/ext4 file system resizer (umount 해야함 )
+
+
+사이즈증가 예제
+vgextend myVG /dev/????
+lvextend -L +512M /dev/myVG/myLG1
+
+resize2fs /dev/myVG/myLG1
+--
+xfs_growfs /dev/myVG/myLG2
+
+
+사이즈축소 예제
+umount /ext4
+e2fsck -f /dev/myVG/myLG1
+resize2fs /dev/myVG/myLG1 1G
+lvreduce -L 1G /dev/myVG/myLG1
+
+지우기 lvremove , vgremove
+
+pvmove
+
+============================
+system-storage-manager
+
+ssm list
+
+dd ~~
+
+ssm add -p myVG /dev/sd~
+mkdir /ddddd
+ssm create -s 1G -n lvname --fstype xfs -p myVG /dev/sd? /ddddd
+ssm list volumes
+ssm resize -s +1G /dev/myVG/lvname
+ssm remove /dev~
+
+===============================
+xfs quota 설정
+
+xfs_quota -x
+ > path 설정
+ > limit -u bsoft=size bhard=size 사용자
+ > report -b
+ > report -i
