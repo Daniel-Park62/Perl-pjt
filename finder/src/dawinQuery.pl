@@ -11,7 +11,7 @@ use Dawin_cont ;
 use Encode qw(from_to is_utf8) ;
 use Encode::KR;
 
-if ( Dawin::getstrdate() > '20160831' ) { print "** 사용가능기간이 지났습니다. \n"; exit };
+if ( Dawin::getstrdate() > '29991231' ) { print "** 사용가능기간이 지났습니다. \n"; exit };
 
 sub HELP_MESSAGE(){
   die <<END;
@@ -52,7 +52,7 @@ my $FHW ;
 $SIG{INT} = sub {
 		close($FHW) if defined $FHW ;
 		my $end = time;
-		printf ("\n***   Aborting $0 : %s \n", Dawin::to_strdate(($end,"/",":")) ) ;
+		printf ("\n***  강제중단됨 $0 : %s \n", Dawin::to_strdate(($end,"/",":")) ) ;
 		die ;
 };
 
@@ -87,7 +87,12 @@ if ( defined($myopts{f}) ) {
 } else {
 	$dbHash{"@ARGV"} = 1;
   $fstrA = join ("|",keys %dbHash) ;
-	$wfile = $odir.'/QI0_'.time ;
+  if (defined($myopts{s})) {
+  	$wfile = $myopts{s};
+  } else {
+  	$sfile = "".time ;
+		$wfile = $odir.'/QI0_'.$sfile ;
+	}
 }
 
 mkdir $odir unless -d $odir ;
@@ -120,7 +125,7 @@ open($FHW,">",$wfile) || die "$wfile $! \n";
 $FHW->autoflush() ;
 
 if ($RULE != 1) {
-	print $FHW  " TBL \t Column \t Directory \t 프로그램ID \t line \t 검색내용 \t QueryID or Class \t 연관검색값 \t seq \t DML\n" ;
+	print $FHW  " TBL \t Column \t Directory \t 프로그램ID \t line \t 검색내용 \t QueryID or Class \t 연관검색값 \t seq \t DML\t 연관func \t func \t origin\n" ;
 	$Fn1 = \&inspect_file ;
 } else {
 	print $FHW " 검색항목 \t DIR \t 프로그램ID \t 줄번호 \t 검색내용 \t Query ID \n" ;
@@ -134,15 +139,13 @@ for my $incl (keys (%hINCL)) {
 	for my $incl2 (keys %{$hINCL{$incl}}) {
 		next unless $hRSLT{$incl} ;
 		for my $kk (keys %{$hRSLT{$incl}}) {
-			print $FHW ("$kk\t",$hINCL{$incl}{$incl2},$hRSLT{$incl}{$kk},"\n") ;
+			print $FHW ("$kk\t",$hINCL{$incl}{$incl2},$hRSLT{$incl}{$kk},$RULE != 1 ? "\t\t\t$incl\n" : "\n") ;
 		}
 	}
 }
 print "\n** 작업파일수 ($TOT_CNT)\n" ;
 
 close($FHW) ;
-
-Dawin::Log_end($opts,$TOT_CNT) ;
 
 =begin comment
 my $eltm = localtime ;
@@ -181,6 +184,7 @@ if ($SW) {
   }
 =cut
 }
+Dawin::Log_end($opts,$TOT_CNT) ;
 
 sub out_actionJsp {
 	my @kk = keys %ActionJsp ;
@@ -194,7 +198,7 @@ sub out_actionJsp {
 }
 
 sub print_if_file {
-	return if ( -d $_ ) ;
+	return if ( -d ) ;
 	my ($nmSpace, @sResult, $idchk, $QID) = ("");
 
 	if( /\.(xml|java)$/i) {
@@ -224,7 +228,9 @@ sub print_if_file {
   		next unless $QID ;
   		if ($line =~ m{<include\s+refid=\"([\w.]+)\"}) {  # 20151102 include를 찾기 위함
   			my $lval = $1;
-				from_to($line ,"utf8", "euc-kr") if (defined($myopts{j}));
+	    	if (defined($myopts{j})) {
+					from_to($line ,"utf8", "euc-kr") if (is_utf8($line));
+				}
   			$line =~ s/(([\x80-\xff].)*)[\x80-\xff]?$/$1/;
 				$line =~ s/\s/ /g;
 				$line =~ s/  / /g;
@@ -239,7 +245,9 @@ sub print_if_file {
 			next if $#sTbl == -1 ;
 			chomp($line);
 			$line =~ s/^\s+//;
-			from_to($line ,"utf8", "euc-kr") if (defined($myopts{j}));
+    	if (defined($myopts{j})) {
+				from_to($line ,"utf8", "euc-kr") if (is_utf8($line));
+			}
 	  	$line =~ s/(([\x80-\xff].)*)[\x80-\xff]?$/$1/;
 			$line =~ s/[\t\r]/ /g;
 			foreach my $kk ( @sTbl ) {
@@ -253,7 +261,7 @@ sub print_if_file {
 }
 
 sub inspect_file {
-	return if ( -d $_ ) ;
+	return if ( -d or /^(?:log4j|web)\.xml/i ) ;
 	return unless (/\.(xml|java)$/i) ;
 	if ( $exts ) { return if (basename($_) =~ /$exts/i) ;	}
 	$TOT_CNT++;
@@ -285,15 +293,17 @@ sub inspect_file {
 			$ls .= $line ;
   		if ($line =~ m{<include\s+refid=\"([\w.]+)\"}) {  # 20151102 include를 찾기 위함
   			my $lval = $1;
-				from_to($line ,"utf8", "euc-kr") if (defined($myopts{j}));
+	    	if (defined($myopts{j})) {
+					from_to($line ,"utf8", "euc-kr") if (is_utf8($line));
+				}
   			$line =~ s/(([\x80-\xff].)*)[\x80-\xff]?$/$1/;
 				$line =~ s/\s/ /g;
 				$line =~ s/  / /g;
   			
   			if ($lval =~ /\./)
-  				{ $hINCL{$lval}{$.} = "$cdir\t$_\t$.\t$line\t$fqid\t\t\t" ; }
+  				{ $hINCL{$lval}{$.} = "$cdir\t$_\t$.\t$line\t$fqid\t\t0\t" ; }
   			else
-  				{ $hINCL{$nmSpace.$lval}{$.} = "$cdir\t$_\t$.\t$line\t$fqid\t\t\t" ; }
+  				{ $hINCL{$nmSpace.$lval}{$.} = "$cdir\t$_\t$.\t$line\t$fqid\t\t0\t" ; }
   		}
 			$line=<$FF> ;
 		}
@@ -315,7 +325,9 @@ sub inspect_file {
 				$line = substr($ls,$+[0],140) ;
 				$line =~ s/(.*)\s/$1/;
 				$line =~ s/^\s+|\s+$//sg;
-				from_to($line ,"utf8", "euc-kr") if (defined($myopts{j}));
+	    	if (defined($myopts{j})) {
+					from_to($line ,"utf8", "euc-kr") if (is_utf8($line));
+				}
   			$line =~ s/(([\x80-\xff].)*)[\x80-\xff]?$/$1/;
 				$line =~ s/\s/ /g;
 				while ($line =~ s/  / /g){}
@@ -323,7 +335,7 @@ sub inspect_file {
 				{ $ls =~ /\b(SELECT|UPDATE|DELETE|INSERT)\b/i and $lscrud = uc($1); }
 				$kk =~ s/\s+/\t/ ;
 				
-				printf $FHW ("%s\t%s\t%s\t%d\t%s\t%s\t\t\t$lscrud\n", $kk ,$cdir, $_ ,$. - $ln ,$line , $fqid) ;
+				printf $FHW ("%s\t%s\t%s\t%d\t%s\t%s\t\t0\t$lscrud\t\t\t%s\n", $kk ,$cdir, $_ ,$. - $ln ,$line , $fqid, $fqid) ;
 				$hRSLT{$fqid}{$kk} = $lscrud;
 				$SW = 1;
 			}
@@ -346,7 +358,9 @@ sub java_if_file {
 			my @sTT = ();
 			@sTT = ($line =~ /[\s\W]($fstrA)[\s\W]/igo) ;
 			next if $#sTT == -1 ;
-			from_to($line ,"utf8", "euc-kr") if (defined($myopts{j}));
+    	if (defined($myopts{j})) {
+				from_to($line ,"utf8", "euc-kr") if (is_utf8($line));
+			}
 			$line =~ s/(([\x80-\xff].)*)[\x80-\xff]?$/$1/;
 			$line =~ s/^\s+|\s+$//g;
 			$line =~ s/\s/ /g;
@@ -373,12 +387,12 @@ sub inspect_java_file {
  # 주석부분제거 다만 LF는 남겨둠
   my $nstr ;
 	while ($ls =~ m!(/\*.*?\*/)!s) {
-		$nstr = '';
-		my $cnt = ($1 =~ tr/\n//);
-		$nstr = "\n"x$cnt if $cnt;
-		$ls =~ s!/\*.*?\*/!$nstr!s ;
+		$nstr = $1;
+		$nstr =~ tr/\n//csd;
+		$ls =~ s!!$nstr!s ;
 	}
-	    
+	while ($ls =~ s!(?>//|--).*?$!!mg) {}
+	
  # 주석제거끝
  
 	foreach my $kk ( keys %dbHash ) {
@@ -401,14 +415,14 @@ sub inspect_java_file {
 
 #			$pos2 += $-[0] if $line =~ /\n/ ;
 
-			while ($line =~ qr!.*?(})!s) {
+			while ($line =~ qr!(?>.*?)(}|\Z)!s) {
 				$line = substr( $line,0,$-[1] ) ;
 				$lcnt = ($line =~ tr/{//);
 				$rcnt = ($line =~ tr/}//);
 				last if ( $lcnt  == $rcnt ) ;
 			}
 
-			$line =~ s/UNION/}/g ;
+#			$line =~ s/UNION/}/g ;
 			if ( uc($val) eq uc($tbl) ) {
 				unless ($line =~ /^[^\/\*][^}]*?\W($item)\W/si) {
 					$line = substr($ls,$pos2 ) ;
@@ -426,14 +440,13 @@ sub inspect_java_file {
 			$ln = ($line =~ tr/\n//) ;
 			$ln++ ;
 
-			{ 
-			  if ( my @marr = ($line =~ /\s+public\s+[^({=]*?\s+(\w+)\s*\(/sgo)) { $method =  $marr[$#marr]; $method = '' if ($method eq 'main') ;}
-			}
-
+#			{ 
+#			  if ( my @marr = ($line =~ /\s+public\s+[^({=]*?\s+(\w+)\s*\(/sgo)) { $method =  $marr[$#marr]; $method = '' if ($method eq 'main') ;}
+#			}
+			$method = "";
+			{ $line =~ /(?>.*)\bpublic\s+[^({=]*?\s+\(/so and $method = $1 ; }
 			$lscrud = "";
-			{ if ( my @qerr = ($line =~ /\b(SELECT|UPDATE|DELETE|INSERT)\s/sgi) )
-				{ $lscrud = $qerr[$#qerr]; }
-			}
+			{ $line =~ /(?>.*)\b(MERGE|SELECT|UPDATE|DELETE|INSERT)/si and $lscrud = $1 ;}
 
 #			$pos = $+[0] if ($+[0]) ;
 #			$line = substr($ls,$pos,100) ;
@@ -441,13 +454,15 @@ sub inspect_java_file {
 			$line = substr($ls,$+[0],140) ;
 			$line =~ s/(.*)\s/$1/;
 			$line =~ s/^\s+|\s+$//g;
-			from_to($line ,"utf8", "euc-kr") if (defined($myopts{j}));
+    	if (defined($myopts{j})) {
+				from_to($line ,"utf8", "euc-kr") if (is_utf8($line));
+			}
 			$line =~ s/(([\x80-\xff].)*)[\x80-\xff]?$/$1/;
 			$line =~ s/\s/ /g;
 			$line =~ s/  / /g;
     		
 			$method = '' unless $method ;
-			printf $FHW ("$tbl\t$item\t%s\t%s\t%d\t%s\t%s\t%s\t\t$lscrud\n", $cdir, $_ ,$ln ,$line, substr($_,0,-5), $method ) if ($s_ln != $ln);
+			printf $FHW ("$tbl\t$item\t%s\t%s\t%d\t%s\t%s\t%s\t0\t$lscrud\n", $cdir, $_ ,$ln ,$line, substr($_,0,-5), $method ) if ($s_ln != $ln);
     		
     		$s_ln = $ln ;
     		$line = substr($ls,$pos2 ) ;
