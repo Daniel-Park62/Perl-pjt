@@ -32,6 +32,7 @@ if ( defined($myopts{h}) ) {
 }  
 
 if ( defined($myopts{d}) ) {
+	$myopts{d} =~ s!\\!/!g;
 	@dir = map { glob }  split(/[, ]/,$myopts{d}) ;
 	print "°Ë»ö directory --> @dir\n";
 } else { @dir = ('.') ; }
@@ -146,7 +147,7 @@ sub inspect_file_new {
 
 	if (-T or /\.(?:sql|pbl|sr.|pc|java|xml)?$/i)  {
 	$TOT_CNT++;
-	Dawin::PRINT_1($TOT_CNT,$_) ; 
+	Dawin::PRINT_1($TOT_CNT,$File::Find::name) ; 
  	open (my $FF,"<",$_) or  print STDERR "** ERROR: $_ $!\n" and return ;
 	my $cdir = $File::Find::dir;
 	$cdir =~ s!^(?:$dirs)/?!! ;
@@ -212,8 +213,11 @@ sub inspect_file_new {
   			next unless ($line =~ /(values|decode)/i) ;
   			next if (length($line) < 31) ;
   	}
-		while ($line =~ s/\s/ /g){}
-		while ($line =~ s/  / /g){}
+		$line =~ s/[\t\r\n]/ /g ;
+		while ($line =~ s/  / / ){}
+  	if (defined($myopts{j})) {
+			from_to($line ,"utf8", "euc-kr") if (is_utf8($line));
+		}
 		$line =~ s/(([\x80-\xff].)*)[\x80-\xff]?$/$1/;
 		$lscrud = "";
 =begin comment		

@@ -415,7 +415,7 @@ sub inspect_java_file {
 
 #			$pos2 += $-[0] if $line =~ /\n/ ;
 
-			while ($line =~ qr!(?>.*?)(}|\Z)!s) {
+			while ($line =~ qr!.*(}|\Z)!s) {
 				$line = substr( $line,0,$-[1] ) ;
 				$lcnt = ($line =~ tr/{//);
 				$rcnt = ($line =~ tr/}//);

@@ -84,7 +84,7 @@ sub ExtCount {
 
 sub PRINT_1($$) {
 	my ($CNT, $FNM) = @_ ; 
-	printf ($Gfmt,"* Scanning.. ($CNT): $FNM") ; 
+	printf ($Gfmt,"* Scanning.. ($CNT):". substr($FNM,-65)) ; 
 	return "";
 }
 sub PRINT_2($$$) { 
