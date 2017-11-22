@@ -59,7 +59,7 @@ $SIG{INT} = sub {
 my %myopts = ();
 my ( $sfile,$dir,$odir,$wfile, $RULE, $exts, %dbHash, $Fn1, $Fn2, $fstrA, $fstrB, @Tlist, %hRSLT, %hINCL );
 my $opts = "@ARGV" ;
-getopts("hjse:o:r:d:f:",\%myopts) or HELP_MESSAGE() ;
+getopts("hje:o:r:s:d:f:",\%myopts) or HELP_MESSAGE() ;
 if ( defined($myopts{h}) ) {
   HELP_MESSAGE();
   exit;
@@ -444,9 +444,9 @@ sub inspect_java_file {
 #			  if ( my @marr = ($line =~ /\s+public\s+[^({=]*?\s+(\w+)\s*\(/sgo)) { $method =  $marr[$#marr]; $method = '' if ($method eq 'main') ;}
 #			}
 			$method = "";
-			{ $line =~ /(?>.*)\bpublic\s+[^({=]*?\s+\(/so and $method = $1 ; }
+			{ $line =~ /.*\spublic\s+[^({=]*?\s+\(/so and $method = $1 ; }
 			$lscrud = "";
-			{ $line =~ /(?>.*)\b(MERGE|SELECT|UPDATE|DELETE|INSERT)/si and $lscrud = $1 ;}
+			{ $line =~ /.*\b(SELECT|UPDATE|DELETE|INSERT|MERGE)/si and $lscrud = $1 ;}
 
 #			$pos = $+[0] if ($+[0]) ;
 #			$line = substr($ls,$pos,100) ;

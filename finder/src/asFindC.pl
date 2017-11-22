@@ -13,8 +13,9 @@ sub HELP_MESSAGE(){
 
 소스 취약점을 분석한다.
 
-    Usage: $0 [-bc][-e 검색정규식][-k 호출관계파일][-o 결과파일] [-s소스파일명 ][-p1 -p2][-d 검색DIR1,검색DIR1,..]
+ Usage: $0 [-bc][-e 검색정규식][-k 호출관계파일][-o 결과파일] [-s소스파일명 ][-d 검색DIR1,검색DIR1,..]
 
+ OPTION
     -d : 검색디렉토리 (생략시 현재DIR에서 검색시작)
     -e : 정규식에 의한 검색
     -L : include dir (, 로 분리하여 다수지정가능))
@@ -31,6 +32,31 @@ END
 my %myopts = ();
 my ($fm_flag, $wfile,$rdir, @sdir, @incldir, %call_func, %Next, %Curr, %called ,%chkM, %chkP) = (0);
 my $findstr = '(?>/\*\s*개인정보암복호화_201[56].\s*START)\s.*?\*/(?:/\*.*?\*/)*\s*(.*?)/\*\s*개인정보암복호화_201[56].\s*END\s*.*?\*/';
+
+my $incl_file_sub; # include file 재귀
+$incl_file_sub = sub  {
+  my ($fname, $href) = @_;
+	my $fh ;
+	foreach my $ldir (@incldir) {
+		my $full_nm = $ldir."/".$fname ;
+		if ( -f $full_nm ) { open ($fh, $full_nm) ; last ; }
+	}
+	return unless ($fh) ;
+	while (<$fh>) {
+		if (/^\s*#include\s+\"(\w+\.h)\"/) {
+			print "recuresive call $1\n";
+			$incl_file_sub->($1,$href) ;
+			next ;
+		}
+
+		while ( /\s(?:int|integer|long|short)(?:\*\s+|\s+\*)\s?((?>\w+))\s*[^(]/g) {
+		 $href->{$1} = $fname ;
+		}
+		;
+	}
+	close $fh ;
+	
+} ;
 
 my $mfilenm;  
 my $parm = "@ARGV" ;
@@ -51,14 +77,14 @@ if ( defined($myopts{o}) ) {	$wfile = $myopts{o} ; }
 
 if ( defined($myopts{d}) ) {
 	$myopts{d} =~ s!\\!/!g  ;
-	@sdir = map { glob} split(/[, ]/,$myopts{d} ) ;
+	@sdir = grep { -d } map { glob} split(/[, ]/,$myopts{d} ) ;
 	print "검색 dir --> @sdir\n";
 } else { @sdir = ('.') ; }
 $rdir = join ('|',@sdir) ;
 
 if ( defined($myopts{L}) ) {
 	$myopts{L} =~ s!\\!/!g  ;
-	@incldir =  map { glob } split(/,/,$myopts{L}), "."  ;
+	@incldir =  grep { -d } map { glob } split(/,/,$myopts{L}), "."  ;
 	print "include dir --> @incldir\n";
 } else { @incldir = ('.') ; }
 
@@ -91,8 +117,8 @@ if ( defined($myopts{b}) )  {
 		print $FHW "\n<!-- 검색식[$findstr] -->\n" ;
 		print $FHW "<dawininc>\n" ;
 	} else {
-		print $FHW ("파일명","\t수정자","\tline","\t내용","\t함수\n") ; 
-	}	
+		print $FHW ("Directory\t","파일명\t","line\t","내용\t","함수\n") ; 
+	}
 }
 
 if ( defined($myopts{f}) && defined($myopts{k}) ) 
@@ -190,22 +216,24 @@ sub search_file {
 #	while ($lsrc =~ s!^[\t ]*\#[^#]*?$!!mg) {}
 	
 	while ($lsrc =~ /^\s*#include\s+\"(\w+\.h)\"/msg) {
-		include_file($1,\%inclsrc) ;
+		$incl_file_sub->($1,\%inclsrc) ;
 	}
-	while ($lsrc =~	/\s(?>int|integer|long|short)(?:\s+|\*\s+|\s+\*)\s?(\w+)\s*[^(]/sg) {
+	while ($lsrc =~	/\s(?:int|integer|long|short)(?:\s+|\*\s+|\s+\*)\s?((?>\w+))\s*[^(]/sg) {
 		$inclsrc{$1} = $_ ;
 	}
 	
 	return unless (%inclsrc) ;
 	my $varlist = join("|", keys %inclsrc) ;
-	my $line ;
-	while  ($lsrc =~ m!( (?:(?:$varlist)\b[^;{}]*(?:<<|>>).*?[{};]|
-	                        \(\s*char\s*\*\s*\)\s*\&?(?:$varlist)\b[^;{}]*[+-].*?[{};]|
-	                        sin_port\s+=.*?;)
+	my ($utype,$line) ;
+	while  ($lsrc =~ m!( (?:($varlist)\b[^;{}]*(?:<<|>>).*?[{};]| 
+	                        (?:memcpy|strncpy|memcopy)\s*\([^)]*($varlist)\s*,.*?; |  # 테스트 목적
+	                        \(\s*char\s*\*\s*\)\s*\&?($varlist)\b[^;{}]*[+-].*?[{};]|
+	                        (sin_port)\s+=.*?;)
 	                 )!sgx 
 	        ) {
    	$line = $1;
- 		next if ($line =~ /sin_port.*hton/s);
+   	$utype = $2 if $2;
+# 		next if ($line =~ /sin_port.*hton/s);
   	if (defined($myopts{j})) {
 			from_to($line ,"utf8", "euc-kr") if (is_utf8($line));
 		}
@@ -226,33 +254,11 @@ sub search_file {
 			while ($line =~ s/  / / ){}
 
 			$line =~ s/(([\x80-\xff].)*)[\x80-\xff]?$/$1/;
-			print $FHW ($File::Find::name,"\t",$ln,"\t",$line,"\t",$fnm,"\n") ;
+			print $FHW ($File::Find::dir,"\t",basename($File::Find::name),"\t",$ln,"\t",$line,"\t",$fnm,$utype ? $utype."\n" : "\n") ;
 		}
 	}
 }
 
-sub include_file {
-  my ($fname, $href) = @_;
-	my $fh ;
-	foreach my $ldir (@incldir) {
-		my $full_nm = $ldir."/".$fname ;
-		if ( -f $full_nm ) { open ($fh, $full_nm) ; last ; }
-	}
-	return unless ($fh) ;
-	while (<$fh>) {
-		if (/^\s*#include\s+\"(\w+\.h)\"/) {
-			include_file($1,$href) ;
-			next ;
-		}
-
-		while ( /\s(?>int|integer|long|short)(?:\*\s+|\s+\*)\s?(\w+)\s*[^(]/g) {
-		 $href->{$1} = $fname ;
-		}
-		;
-	}
-	close $fh ;
-	
-}
 
 sub line_check {
   my $arg = shift;
