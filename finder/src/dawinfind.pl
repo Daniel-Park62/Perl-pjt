@@ -19,7 +19,7 @@ my $IGNORE = qr/(?:txt|log|exe|pdf|swf|zip|tar|jpeg|wmv|jpg|gif|bmp|jar|class|ba
 my $regex1 = qr/(?>.*[;{]).*?[\s\"](MERGE|SELECT|UPDATE|DELETE|INSERT)\s[^;]*?/osi ;
 my $regex2 = qr/.*\s\w{3,}\s+(\w{9,})\s*(?>\([^;={:|]*?\)[^()]*?{)/os;
 
-#if ( Dawin::getstrdate() > '20160831' ) { print "** ���밡�ɱⰣ�� �������ϴ�. \n"; exit };
+#if ( Dawin::getstrdate() > '20160831' ) { print "** 사용가능기간이 지났습니다. \n"; exit };
 
 my %myopts = ();
 my ( $wfile, @dir, $dirs, $sfile, $wsrc_dir, %fnHash, $incl, $exts, $g_std_time);
