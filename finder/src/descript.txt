@@ -1,0 +1,5 @@
+** 파일 목록 작성
+dawinList.pl 
+
+** query 에서 테이블 도출
+dawinTbl.pl
