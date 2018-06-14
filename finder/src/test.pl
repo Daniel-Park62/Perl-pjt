@@ -5,6 +5,14 @@ use 5.010 ;
 #my	@dir = grep { -d } map { s!\\!/!g; glob }  split(/[, ]/,$ARGV[0]) ;
 my @lstr = split (/\s+|\W/,"kjiuweiu\new873487skjsdkj", 2) ;
 
+my $test = "asel    ect kjsd    kjds  delete       hh";
+$test =~ s/\s+/ /g ;
+
+$test =~ /\bdelete/;
+
+say $test;
+say $&;
+
 say "@lstr"," ", scalar(@lstr);
 
 

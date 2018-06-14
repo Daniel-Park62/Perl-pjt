@@ -19,7 +19,7 @@ my $IGNORE = qr/(?:txt|log|exe|pdf|swf|zip|tar|jpeg|wmv|jpg|gif|bmp|jar|class|ba
 my $regex1 = qr/(?>.*[;{]).*?[\s\"](MERGE|SELECT|UPDATE|DELETE|INSERT)\s[^;]*?/osi ;
 my $regex2 = qr/.*\s\w{3,}\s+(\w{9,})\s*(?>\([^;={:|]*?\)[^()]*?{)/os;
 
-#if ( Dawin::getstrdate() > '20160831' ) { print "** ì‚¬ìš©ê°€ëŠ¥ê¸°ê°„ì´ ì§€ë‚¬ìŠµë‹ˆë‹¤. \n"; exit };
+#if ( Dawin::getstrdate() > '20160831' ) { print "** »ç¿ë°¡´É±â°£ÀÌ Áö³µ½À´Ï´Ù. \n"; exit };
 
 my %myopts = ();
 my ( $wfile, @dir, $dirs, $sfile, $wsrc_dir, %fnHash, $incl, $exts, $g_std_time);
@@ -34,13 +34,13 @@ if ( defined($myopts{h}) ) {
 
 if ( defined($myopts{d}) ) {
 	@dir = grep { -d } map { s!\\!/!g; glob }  split(/[, ]/,$myopts{d}) ;
-	print "ï¿½Ë»ï¿½ directory --> @dir\n";
+	print "°Ë»ö directory --> @dir\n";
 } else { @dir = ('.') ; }
 
 if ( defined($myopts{v}) ) {
-	die "!! -v ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½.($myopts{v})" unless -e $myopts{v};
+	die "!! -v ÁöÁ¤ÇÑ ÆÄÀÏÀÌ ¾ø½À´Ï´Ù.($myopts{v})" unless -e $myopts{v};
 	$g_std_time = (stat($myopts{v}))[9] ;
-	print "ï¿½ï¿½ï¿½ï¿½ï¿½Ï½ï¿½:[ ", Dawin::to_strdate($g_std_time,"-",":")," ]\n";
+	print "±âÁØÀÏ½Ã:[ ", Dawin::to_strdate($g_std_time,"-",":")," ]\n";
 }
 my $delim = $myopts{r} || ';' ;
 $dirs = join ('|',@dir) ;
@@ -48,8 +48,8 @@ if ( defined($myopts{o}) ) {
 	$wfile = $myopts{o} ;
 	if ( -f $wfile ) {
 		my $choice ;
-		print "*** $wfile ï¿½ï¿½ ï¿½ï¿½ï¿½î¾µï¿½ï¿½ï¿½ï¿½?.(y/n) " ;
-		chomp ($choice = <STDIN>);
+		print "*** $wfile µ¤¾î¾²½Ã°Ú½À´Ï±î?.(y/n) " ;
+		chomp ($choice = <STDIN> || 'y');
 		exit  if (lc($choice) ne "y")  ;
 	}
 }
@@ -61,7 +61,7 @@ print "@Tlist","\n" if @Tlist ;
 my ($fstr, %dbHash) ;
 if ( defined($myopts{f}) ) {
 	$sfile = $myopts{f} ;
-  die "!! ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½.($sfile)" unless -e $sfile;
+  die "!! ÁöÁ¤ÇÑ ÆÄÀÏÀÌ ¾ø½À´Ï´Ù.($sfile)" unless -e $sfile;
   if ( defined($myopts{k}) ) {
     read_funcName($sfile) ;
   } elsif ( defined($myopts{t}) ) {
@@ -100,7 +100,7 @@ my ($FHW, $Fn1 ) ;
 
 STDOUT->autoflush() ;
 if ( defined($wfile) ) {
-  print  "** ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ --> $wfile \n";
+  print  "** °á°úÆÄÀÏ --> $wfile \n";
   open($FHW,">",$wfile) || die "$wfile $! \n";
   $FHW->autoflush() ;
 
@@ -112,13 +112,13 @@ if ( defined($wfile) ) {
 
 if  ( defined($myopts{k}) ) {
 	$Fn1 = \&inspect_func ;
-	print $FHW " DIR \t ï¿½ï¿½ï¿½Ï¸ï¿½ \t Function \t È£ï¿½ï¿½DIR \t \È£ï¿½ï¿½ï¿½ï¿½ï¿½Î±×·ï¿½ \t ï¿½Ù¹ï¿½È£ \t ï¿½Ë»ï¿½ï¿½ï¿½ï¿½ï¿½ \n" ;
+	print $FHW " DIR \t File name \t Function \t call_DIR \t call_program \t line \t find_text \n" ;
 } elsif  ( defined($myopts{t}) ) {
 	$Fn1 = \&inspect_file_2 ;
-	print $FHW " TBL \t COL \t DIR \t ï¿½ï¿½ï¿½Ï¸ï¿½ \t ï¿½Ù¹ï¿½È£ \t ï¿½Ë»ï¿½ï¿½ï¿½ï¿½ï¿½ \t DML \t ï¿½Ô¼ï¿½ï¿½ï¿½ \n" ;
+	print $FHW " TBL \t COL \t DIR \t File_name \t line \t find_text \t DML \t func_name \n" ;
 } else {
 	$Fn1 = \&inspect_file_new ;
-	print $FHW " ï¿½Ë»ï¿½ï¿½×¸ï¿½ \t DIR \t ï¿½ï¿½ï¿½Ï¸ï¿½ \t ï¿½Ù¹ï¿½È£ \t ï¿½Ë»ï¿½ï¿½ï¿½ï¿½ï¿½ \t DML \t ï¿½Ô¼ï¿½ï¿½ï¿½ \n" ;
+	print $FHW " find_item \t DIR \t File_name \t line \t find_text \t DML \t func_name \n" ;
 }
 
 find($Fn1, @dir);
@@ -126,12 +126,12 @@ find($Fn1, @dir);
 if ( defined($wfile) ) {
   close($FHW) ;
 }
-print  "\n** ï¿½Û¾ï¿½ï¿½ï¿½ï¿½Ï¼ï¿½ ($TOT_CNT)\n" ;
+print  "\n** Number of file ($TOT_CNT)\n" ;
 
 Dawin::Log_end($parm,$TOT_CNT) ;
 
 ###################################
-# ï¿½Ë»ï¿½ï¿½×¸ï¿½ 1 New
+# find_item 1 New
 ###################################
 sub inspect_file_new {
 	return if ( ( -d || /\.(txt|log|exe|pdf)?$/i || /\d{8,}/ ) && ( ! defined($myopts{a}) ) );
@@ -146,7 +146,6 @@ sub inspect_file_new {
 		return if ( (stat($_))[9] < $g_std_time) ;
 	}
 
-	if (-T or /\.(?:sql|pbl|sr.|pc|java|xml)?$/i)  {
 	$TOT_CNT++;
 	Dawin::PRINT_1($TOT_CNT,$File::Find::name) ;
  	open (my $FF,"<",$_) or  print STDERR "** ERROR: $_ $!\n" and return ;
@@ -157,6 +156,7 @@ sub inspect_file_new {
 	my ($winnm,  $line, $lsrc, $lscrud,$fnm,$item,$pos,$ln) = ('','','','','');
 	$lsrc=<$FF> ;
 	close $FF;
+	
 	my ($nstr,$cnt) ;
 
 	if ( ! defined($myopts{c}) ) {
@@ -215,11 +215,8 @@ sub inspect_file_new {
   			next unless ($line =~ /(values|decode)/i) ;
   			next if (length($line) < 31) ;
   	}
-		$line =~ s/[\t\r\n]/ /sg ;
-		while ($line =~ s/  / / ){}
-  	if (defined($myopts{j})) {
-			from_to($line ,"utf8", "euc-kr") if (is_utf8($line));
-		}
+		$line =~ s/\s\s+/ /sg ;
+
 		$line =~ s/(([\x80-\xff].)*)[\x80-\xff]?$/$1/;
 		$lscrud = "";
 		$fnm = "";
@@ -241,12 +238,12 @@ sub inspect_file_new {
 
 		$ln =  (substr($lsrc,0,$pos) =~ tr/\n//) ;
 		$ln++ ;
-
+		$item =~ s/\s/ /g;
 		printf $FHW ("%s\t%s\t%s\t$ln\t%s\t%s\t%s\t%s\n",searchW( $item ) , $cdir, $_ , $line , $lscrud, $fnm, $item ) ;
 
     } # while
 
-    } # if end
+  
 }
 
 
@@ -275,10 +272,8 @@ sub inspect_file_2 {
 		inspect_file_c() ;
 		return ;
 	}
-	if( (-T && defined($myopts{a}) or /\.(?:java|jsp|sql)$/i) ) {
-
-#	Dawin::PRINT_1($TOT_CNT,$_) ;
-#	print  "\r** ï¿½Û¾ï¿½ï¿½ï¿½ ($TOT_CNT): $_"," "x (60 - length($_)) ;
+	
+	return unless( (-T && defined($myopts{a}) or /\.(?:java|jsp|sql)$/i) ) ;
 
   open (my $FF,$_) or  print STDERR "** ERROR: $_ $!\n" and return ;
   my ($cdir, $fcnt,$fchk, $ln,$pos1, $line, $pos2, $s_ln, $lstemp ) ;
@@ -316,18 +311,19 @@ sub inspect_file_2 {
 		while ( $line =~ m!\W($item|$tbl)\W[^$delim]*?($delim|\z)!si ) {
 			$val = $1;
 			last unless $-[2]  ;
-
+			my $pp2 = $-[2];
 			$pos1 = $pos2;
-			$pos2 += $-[2];
-			my $line2 = "";
-
-			$line = substr($line, $-[1], $-[2] - $-[1] + 1) ;
-			$pos1 += $-[1] ;
+			$pos2 += $pp2;
 
 			if ( uc($val) eq uc($tbl)) {
-				if ($line =~ /[^\s]*?\W$item\W/) {$line2 = $&} else {$line = substr($ls,$pos2 ) ;	next ;}
+				$line = substr($line,$-[1] -1, $pp2 - $-[1] + 1);
+				$pos1 += $-[1];
+				if ($line !~ /$item/i) {$line = substr($ls,$pos2 ) ;	next ;}
 			} else {
-				if ($line =~ /[^\s]*?\W$tbl\W/) {$line2 = $&} else {$line = substr($ls,$pos2 ) ;	next ;}
+				substr($line,0,$-[1]) =~ /.*\n/s;
+				$line = substr($line,$+[0],$pp2 - $+[0] ) ;
+				$pos1 += $+[0] ;
+				if ($line !~ /$tbl/i) {$line = substr($ls,$pos2 ) ;	next ;}
 			}
 
 			if ( ! defined($myopts{n}) && sql_tblcol($tbl,$item,$line) == 0 ) {
@@ -337,22 +333,20 @@ sub inspect_file_2 {
 
 			$lstemp = substr($ls,0,$pos1) ;
 			{ $lstemp =~ /$regex1/ and $lscrud = uc($1) ; }
-			unless ($lscrud) {$lstemp =~ /.*\W(MERGE|SELECT|UPDATE|DELETE|INSERT)\W/si and $lscrud = uc($1);}
+			unless ($lscrud) {$lstemp =~ /.*\b(MERGE|SELECT|UPDATE|DELETE|INSERT)\W/si and $lscrud = uc($1);}
 
    		$ln = ($lstemp =~ tr/\n//) + 1 ;
-			$lstemp =~ /.*\s/s ;
-			$line = substr($ls,$+[0],$pos2 - $+[0]) ;
-#			$line =~ /(.*)[;\s]/s and $line = $1;
+			$lstemp =~ /.*\n/s ;
+			$line = substr($ls,$+[0],140) ;
+			$line =~ s/(.*)[\s;}]/$1/s ;
 
     	if (defined($myopts{j})) {
 				from_to($line ,"utf8", "euc-kr") if (is_utf8($line));
 			}
 			$line =~ s/(([\x80-\xff].)*)[\x80-\xff]?$/$1/;
   		$line =~ s/^\s+|\s+$//s;
-  		$line =~ s/\s/ /sg;
-  		$line =~ s/\s\s/ /sg;
-  		$line2 =~ s/\s\s/ /sg;
-			$line .= " -> ".$line2 ;
+  		$line =~ s/\s+/ /sg;
+  		$line =~ s/^--/ --/;
   		printf $FHW ("%s\t%s\t%s\t%d\t%s\t$lscrud\n", $kk ,$cdir, $_ ,$ln ,$line ) ;#if ($s_ln != $ln);
 
   		$s_ln = $ln ;
@@ -360,14 +354,10 @@ sub inspect_file_2 {
   		$line = substr($ls,$pos2 ) ;
 		}
 	}
-	} # if end
+
 }
 
 sub inspect_file_c {
-	# ï¿½ï¿½Ã¼ï¿½ï¿½ cud ï¿½Ë»ï¿½ï¿½ï¿½ ï¿½ï¿½È¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î±×·ï¿½ skip
-	if ( defined( $myopts{u}) and /[RP]\.pc$/  ) {
-		return ;
-	}
 
 	open (my $FF,$_) or  print STDERR "** ERROR: $_ $!\n" and return ;
 	my ($cdir, $lstemp, $fcnt,$fchk, $ln,$pos1, $line, $pos2, $s_ln ) ;
@@ -428,40 +418,36 @@ sub inspect_file_c {
 	}
 	$ls =~ s!\\$!!mg ;
 
-	my $save_ln = 1;
-	if ($ls =~ /\s\w{3,}\s+\w+\s*\([^;={]*?\)\s*[^;]/s)
-		{ $lstemp =  substr($ls ,0,$-[0]);
-			$save_ln = ($lstemp =~ tr/\n//) + 1   ;
-			$ls = substr($ls, $-[0]) ;
-		}
+	my $save_f = 0;
+	$ls =~ /\s\w{3,}\s+\w+\s*\([^;={]*?\)\s*[^;]/s  and $save_f = $-[0] ;
 
 	foreach my $kk ( keys %dbHash ) {
-		$pos2 = 0;
+		$pos2 = $save_f;
 		$s_ln = 0;
 		my ($tbl,$item)  = ( split /\s/,$kk ) ;
 
 		next unless ( $ls =~ /\b$item\b[^;]*?\b$tbl\b|\b$tbl\b[^;]*?\b$item\b/si ) ;
 
 		next if (length($tbl) < 2 || length($item) < 2) ;
-		$tbl =~ s/\$/\\\$/g ;
+		$tbl  =~ s/\$/\\\$/g ;
 		$item =~ s/\$/\\\$/g ;
-		$line = $ls ;
+		$line = substr($ls,$save_f) ;
 		my ($lscrud,$fnm,$val,@tarr) = ('','') ;
-		while ( $line =~ m!.*?\W($item|$tbl)\W[^$delim]*?($delim|\z)!si ) {
+		while ( $line =~ m!.*?\W($item|$tbl)\W[^$delim]*?($delim|union|\z)!si ) {
 			$val = $1;
 
 			last unless $-[2] ;
+			my $pp2 = $-[2];
 			$pos1 = $pos2 ;
-			$pos2 += $-[2] ;
-			my $line2 = "";
-
-			$line = substr($line, $-[1], $-[2] - $-[1] + 1) ;
-			$pos1 += $-[1] ;
+			$pos2 += $pp2 ;
 
 			if ( uc($val) eq uc($tbl)) {
-				if ($line =~ /[^\s]*?\W$item\W/) {$line2 = $&} else {$line = substr($ls,$pos2 ) ;	next ;}
+				$line = substr($line, $-[1] - 1, $pp2 - $-[1] + 1);
+				$pos1 += $-[1];
 			} else {
-				if ($line =~ /[^\s]*?\W$tbl\W/) {$line2 = $&} else {$line = substr($ls,$pos2 ) ;	next ;}
+				substr($line,0,$-[1]) =~ /.*\n/s;
+				$line = substr($line, $+[0], $pp2 - $+[0]);
+				$pos1 += $+[0];
 			}
 
 			if ( ! defined($myopts{n}) && sql_tblcol($tbl,$item,$line) == 0 ) {
@@ -469,25 +455,32 @@ sub inspect_file_c {
 				next ;
 			}
 
-			$lstemp = substr($ls,0,$pos1) ;
+			$lstemp = substr($ls,$save_f,$pos1 - $save_f) ;
 
 			{ $lstemp =~ /$regex1/ and $lscrud = uc($1) ; }
-			unless ($lscrud) { $lstemp =~ /.*\W(MERGE|SELECT|UPDATE|DELETE|INSERT)\W/si and $lscrud = uc($1) ; }
+			unless ($lscrud) { $line =~ /.*\b(MERGE|SELECT|UPDATE|DELETE|INSERT)\W/si and $lscrud = uc($1) ; }
 #			while ($lstemp =~ s/EXEC\s+SQL\s[^;]*+?;//si) {}
 			{ $lstemp =~ /$regex2/  and $fnm = $1 ;}
 
-			$lstemp =~ /.*\s/s ;
+			if ( uc($val) eq uc($tbl)) {
+				unless ($line =~ m!.*?\b($item)\b!si) { 
+					$line = substr($ls,$pos2) ;
+					next;
+				}
+				$pos1 += $-[1];
+			}
+			$lstemp = substr($ls,0,$pos1) ;
+			$lstemp =~ /.*\n/s ;
 
-			$ln = ($lstemp =~ tr/\n//) + $save_ln;
+			$ln = ($lstemp =~ tr/\n//) + 1;
 
-			substr($ls,$+[0],$pos2 - $+[0]) =~ /(.*)[\s;}]/s and $line = $1;
+			substr($ls,$+[0],140) =~ /(.*)[\s;}]/s and $line = $1;
     	if (defined($myopts{j})) {
 				from_to($line ,"utf8", "euc-kr") if (is_utf8($line));
 			}
 			$line =~ s/(([\x80-\xff].)*)[\x80-\xff]?$/$1/;
 			$line =~ s/^[\s,]+|\s+$//s;
-			$line =~ s/\s/ /sg;
-			$line =~ s/  / /sg;
+			$line =~ s/\s+/ /sg;
 			printf $FHW ("%s\t%s\t%s\t%d\t%s\t%s\t$fnm\n", $kk ,$cdir, $_ ,$ln ,$line, $lscrud ) if ($s_ln != $ln);
 =begin comment
 			if ( defined($wsrc_dir) ) {
@@ -498,9 +491,8 @@ sub inspect_file_c {
   		$s_ln = $ln ;
 			last if ( defined($myopts{s}) ) ;
   		$line = substr($ls,$pos2  ) ;
-		}
-	}
-
+		} # while end
+  } #foreach end
 }
 
 sub inspect_xml {
@@ -531,7 +523,7 @@ sub inspect_xml {
 			undef $pos ;
 			foreach my $item ( split /\t/,$kk ) {
 				$fcnt++ ;
-  				if ($ls =~ /\W$item\W/s) {
+  				if ($ls =~ /\b$item\b/s) {
   					$fchk++ ;
   					$pos = $-[0] if ( !defined($pos) or $pos > $-[0]);
   				}
@@ -545,8 +537,7 @@ sub inspect_xml {
 				$line =~ s/(([\x80-\xff].)*)[\x80-\xff]?$/$1/;
   				$line =~ s!^\s+|\s+$!! ;
 
-  				$line =~ s/\s/ /g;
-    			$line =~ s/  / /g;
+  				$line =~ s/\s+/ /g;
 				my $lscrud = '';
 				{ $ls =~ /\b(SELECT|UPDATE|DELETE|INSERT)\b/i and $lscrud = uc($1); }
 
@@ -557,7 +548,7 @@ sub inspect_xml {
     }
     close ($FF) ;
 }
-# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½
+# exclude file
 sub except_const {
     my $sfile = shift;
 	if (-e $sfile) {
@@ -569,7 +560,7 @@ sub except_const {
 		$exts =~ tr/,/|/ ;
 	}
 }
-# ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¸ï¿½ï¿½ï¿½
+# include file
 sub include_const {
     my $sfile = shift;
 	if (-e $sfile) {
@@ -613,7 +604,6 @@ sub hash_const_2item {
     open(my $sfh,"<", $sfile) || die "$sfile $! \n";
     while(<$sfh>)
     {
-    	next if (/DIR.+ï¿½Ë»ï¿½ï¿½ï¿½ï¿½ï¿½/) ;
       chomp;
       @items = split(/\s+/, $_);
       @items = Dawin::trim(@items);
@@ -658,7 +648,6 @@ sub read_funcName {
 	$fstr = join ("|",keys %fnHash) ;
     print  "read_funcName e: ", scalar(keys %fnHash ),"\n" ;
     close ($INF);
-
 
 }
 
@@ -801,45 +790,43 @@ sub sql_tblcol {
 sub HELP_MESSAGE{
   die <<'END';
 
-ï¿½Ë»ï¿½ï¿½×¸ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Î±×·ï¿½ï¿½ï¿½ Ã£ï¿½Â´ï¿½.
+ÅØ½ºÆ® ÆÄÀÏ °Ë»ö
 
-Usage: $0 [-acijkmnst][-o ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½][-d ï¿½Ë»ï¿½DIR] [-v ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ] [-f ï¿½Ë»ï¿½ï¿½×¸ï¿½ï¿½ï¿½ï¿½ï¿½] [-e ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½] [-g ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½]
+Usage: $0 [-acijkmnst][-o °á°úÆÄÀÏ][-d find DIR] [-v ±âÁØÆÄÀÏ] [-f °Ë»öÇ×¸ñÆÄÀÏ] [-e Á¦¿ÜÆÄÀÏ] [-g °Ë»ö´ë»óÆÄÀÏ]
 
 OPTION
- -a : ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ë»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½
- -c : ï¿½Ö¼ï¿½ï¿½ï¿½ï¿½Ô°Ë»ï¿½
- -d : ï¿½Ë»ï¿½DIR ( ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ä¸® ï¿½Ë»ï¿½ )
- -e ï¿½ï¿½ï¿½ï¿½È®ï¿½ï¿½ï¿½ï¿½ : ï¿½Ë»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½È®ï¿½ï¿½ï¿½ï¿½ ( ex : -e txt,log )
- -f ï¿½Ë»ï¿½ï¿½×¸ï¿½ï¿½ï¿½ï¿½ï¿½ : ï¿½Ë»ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ïµï¿½ ï¿½Ø½ï¿½Æ® ï¿½ï¿½ï¿½ï¿½
- -g ï¿½ï¿½ï¿½ï¿½È®ï¿½ï¿½ï¿½ï¿½ : ï¿½Ë»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½È®ï¿½ï¿½ï¿½ï¿½ ( ex : -g txt,log )
- -i : ï¿½ï¿½ï¿½Ò¹ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
- -j : utf8 => euc-kr ï¿½ï¿½È¯
- -k : ï¿½Ë»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ô¼ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½Ë»ï¿½ -kt, -k
- -m : SELECT * INSERT * ï¿½Ë»ï¿½
- -n : ï¿½ï¿½ï¿½ï¿½ï¿½Ð¼ï¿½ï¿½ï¿½ï¿½ï¿½ ( ï¿½Ü¼ï¿½ï¿½Ë»ï¿½ )
- -o ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ : ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ï·ï¿½ ï¿½Ë»ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½.
- -q : SELECT * INSERT * ï¿½Ë»ï¿½(java,xml)
- -s : ï¿½Ö¼Ò°Ë»ï¿½ ( ï¿½ï¿½ï¿½Ï³ï¿½ï¿½ï¿½ï¿½ï¿½ 1È¸ï¿½ï¿½ Ç¥ï¿½ï¿½ )
- -r ï¿½ï¿½ï¿½Ü±ï¿½ï¿½ï¿½ : ï¿½ï¿½ï¿½Ü±ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ (ï¿½âº»ï¿½ï¿½ ;)
- -t : ï¿½ï¿½ï¿½Ìºï¿½,Ä®ï¿½ï¿½ 2ï¿½×¸ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ë»ï¿½(ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ 1ï¿½×¸ï¿½ï¿½Ë»ï¿½)
- -v ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ : ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+ -a : ¸ðµçÆÄÀÏ°Ë»ö
+ -c : ÁÖ¼®³»¿ëµµ °Ë»ö
+ -d : °Ë»ö´ë»óDIR (»ý·«½Ã ÇöÀç DIR)
+ -e : °Ë»öÁ¦¿ÜÆÄÀÏ È®ÀåÀÚ( ex : -e txt,log )
+ -g : °Ë»ö´ë»óÆÄÀÏ È®ÀåÀÚ( ex : -g txt,log )
+ -i : ´ë¼Ò¹®ÀÚ ¹«½Ã
+ -j : utf8 => euc-kr ???
+ -k : °Ë»ö°á°úÀÇ ÇÔ¼ö¸¦ »ç¿ëÇÏ´Â ÆÄÀÏ°Ë»ö -kt, -k
+ -m : SELECT * INSERT * °Ë»ö
+ -q : SELECT * INSERT * °Ë»ö(java,xml)
+ -n : SQLºÐ¼® ¾ÈÇÔ
+ -o : °Ë»ö°á°ú°ªÀ» ±â·ÏÇÒ ÆÄÀÏ¸í (ÁöÁ¤ÇÏÁö ¾ÊÀ¸¸é È­¸éÃâ·ÂµÊ)
+ -s : ÃÖ¼Ò°Ë»ö(µ¿ÀÏ³»¿ëÀº 1È¸¸¸ Ç¥½Ã)
+ -r : ¹®´Ü±¸ºÐÀÚ ( ±âº»°ª ;)
+ -t : °Ë»öÇ×¸ñ 2°³ ( Table¸í, column¸í)
+ -v : ±âÁØÆÄÀÏ ( ÀÌ ÆÄÀÏÀÌÈÄ ¼öÁ¤¶Ç´Â »ý¼ºµÈ ÆÄÀÏ¸¸ °Ë»ö )
+ -f : °Ë»öÇ×¸ñÆÄÀÏ 
 
-  ï¿½Ë»ï¿½ï¿½×¸ï¿½ï¿½ï¿½ï¿½ï¿½ : ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ë»ï¿½ï¿½×¸ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Îºï¿½ï¿½ï¿½ ï¿½Ð¸ï¿½
-   ï¿½ï¿½)
-     ï¿½Ë»ï¿½ï¿½×¸ï¿½1
-     ï¿½Ë»ï¿½ï¿½×¸ï¿½2
+  °Ë»öÇ×¸ñÆÄÀÏ³»¿ë)
+		°Ë»ö°ª1
+		°Ë»ö°ª2
+		.
+		.
+		°Ë»ö°ªn
+				
+   * -t ¿É¼ÇÀ» »ç¿ë½Ã
+     Å×ÀÌºí¸í1	ÄÄ·³¸í1
+     Å×ÀÌºí¸í1	ÄÄ·³¸í2
+     Å×ÀÌºí¸í2	ÄÄ·³¸í1
      .
      .
-     ï¿½Ë»ï¿½ï¿½×¸ï¿½n
-
-   * -t ï¿½É¼ï¿½ï¿½ï¿½ ï¿½Ö¾ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ä®ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ìºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
-     ï¿½ï¿½ï¿½Ìºï¿½ï¿½ï¿½1 Ä®ï¿½ï¿½ï¿½×¸ï¿½1
-     ï¿½ï¿½ï¿½Ìºï¿½ï¿½ï¿½2 Ä®ï¿½ï¿½ï¿½×¸ï¿½2
-     .
-     .
-     ï¿½ï¿½ï¿½Ìºï¿½ï¿½ï¿½n Ä®ï¿½ï¿½ï¿½×¸ï¿½n
-
-ï¿½Ë»ï¿½DIRï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½DIRï¿½ï¿½ï¿½ï¿½ ï¿½Ë»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.
+     Å×ÀÌºí¸ín	ÄÄ·³¸ín
 
 END
 }

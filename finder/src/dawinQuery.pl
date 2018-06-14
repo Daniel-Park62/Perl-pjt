@@ -1,4 +1,4 @@
-use warnings;
+
 use strict;
 use File::Find;
 use Getopt::Std; 
@@ -13,39 +13,6 @@ use Encode::KR;
 
 if ( Dawin::getstrdate() > '29991231' ) { print "** 사용가능기간이 지났습니다. \n"; exit };
 
-sub HELP_MESSAGE(){
-  die <<END;
-TABLE에 대한 Query ID 를 파일에서수집.
-
-Usage: $0 [-o path] [-r 1 ~ 3 ] [ -d path ] [ -e 명칭1,명칭2... ] ([-f 검색항목파일] | 검색값 )
-
-OPTION
-    -o <path>       결과를 저장할 dir (지정하지않으면 현재dir)
-    -d <src path>  검색대상 소스 root  dir
-    -e <제외명칭>  해당명칭을 포함하는 파일제외
-    -f <검색파일>  검색값이 기록된 텍스트 파일
-    -j utf8 => euc-kr 변환
-    -h view help message
-
-검색항목파일 : 각각의 검색항목을 라인별로 분리
-  예)
-    검색항목1
-    검색항목2
-    .
-    .
-    검색항목n
-
-   * -r2, -r3 옵션을 주었을 경우는 테이블명과 칼럼명을을 지정한다.
-    테이블명1 칼럼항목1 
-    테이블명2 칼럼항목2 
-    .
-    .    
-    테이블명n 칼럼항목n 
-
-검색DIR은 생략시 현재DIR에서 검색시작함.
-    
-END
-}
 
 my $FHW ;
 
@@ -561,4 +528,38 @@ sub except_const {
 
 sub VERSION_MESSAGE(){
   print "$0 Version 1.2 danielpk62\@dawinit.com";
+}
+
+sub HELP_MESSAGE(){
+  die <<END;
+TABLE에 대한 Query ID 를 파일에서수집.
+
+Usage: $0 [-o path] [-r 1 ~ 3 ] [ -d path ] [ -e 명칭1,명칭2... ] ([-f 검색항목파일] | 검색값 )
+
+OPTION
+    -o <path>       결과를 저장할 dir (지정하지않으면 현재dir)
+    -d <src path>  검색대상 소스 root  dir
+    -e <제외명칭>  해당명칭을 포함하는 파일제외
+    -f <검색파일>  검색값이 기록된 텍스트 파일
+    -j utf8 => euc-kr 변환
+    -h view help message
+
+검색항목파일 : 각각의 검색항목을 라인별로 분리
+  예)
+    검색항목1
+    검색항목2
+    .
+    .
+    검색항목n
+
+   * -r2, -r3 옵션을 주었을 경우는 테이블명과 칼럼명을을 지정한다.
+    테이블명1 칼럼항목1 
+    테이블명2 칼럼항목2 
+    .
+    .    
+    테이블명n 칼럼항목n 
+
+검색DIR은 생략시 현재DIR에서 검색시작함.
+    
+END
 }
