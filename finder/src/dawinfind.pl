@@ -1,15 +1,16 @@
+
 use strict;
-use warnings;
 use File::Find;
 use File::Copy;
 use File::Path qw(make_path );
-use Getopt::Std; 
+use Getopt::Std;
 use IO::Handle;
 use File::Basename;
 use Dawin;
 #use DwgenHTML;
 use Encode qw(from_to is_utf8) ;
 use Encode::KR;
+use Encode::Guess;
 
 use constant SELECT_ALL => 'SELECT\s+(?:\w\.)?\*\s+into\s[^;(]*?';
 use constant SELECT_ALLJ => 'SELECT\s+(?:\w\.)?\*\s+(?:FROM|INTO)\s[^(<]*?';
@@ -24,16 +25,15 @@ my %myopts = ();
 my ( $wfile, @dir, $dirs, $sfile, $wsrc_dir, %fnHash, $incl, $exts, $g_std_time);
 
 my $parm = "@ARGV" ;
-getopts("achijkmnqstud:e:f:g:o:v:",\%myopts) or HELP_MESSAGE() ; 
+getopts("achijkmnqstud:e:f:g:o:v:r:",\%myopts) or HELP_MESSAGE() ;
 
 if ( defined($myopts{h}) ) {
   HELP_MESSAGE();
   exit;
-}  
+}
 
 if ( defined($myopts{d}) ) {
-	$myopts{d} =~ s!\\!/!g;
-	@dir = map { glob }  split(/[, ]/,$myopts{d}) ;
+	@dir = grep { -d } map { s!\\!/!g; glob }  split(/[, ]/,$myopts{d}) ;
 	print "검색 directory --> @dir\n";
 } else { @dir = ('.') ; }
 
@@ -42,14 +42,14 @@ if ( defined($myopts{v}) ) {
 	$g_std_time = (stat($myopts{v}))[9] ;
 	print "기준일시:[ ", Dawin::to_strdate($g_std_time,"-",":")," ]\n";
 }
-
+my $delim = $myopts{r} || ';' ;
 $dirs = join ('|',@dir) ;
 if ( defined($myopts{o}) ) {
 	$wfile = $myopts{o} ;
 	if ( -f $wfile ) {
 		my $choice ;
-		print "*** $wfile 을 덮어쓸까요?.(y/n) " ;
-		chomp ($choice = <STDIN>);
+		print "*** $wfile 덮어쓰시겠습니까?.(y/n) " ;
+		chomp ($choice = <STDIN> || 'y');
 		exit  if (lc($choice) ne "y")  ;
 	}
 }
@@ -107,18 +107,18 @@ if ( defined($wfile) ) {
 #  $wsrc_dir = Cwd::abs_path(dirname($wfile)).'/src/' ;
 #  make_path($wsrc_dir) ;
 #  print "$wsrc_dir\n";
-  
+
 } else {$FHW = *STDOUT;}
 
 if  ( defined($myopts{k}) ) {
 	$Fn1 = \&inspect_func ;
-	print $FHW " DIR \t 파일명 \t Function \t 호출DIR \t \호출프로그램 \t 줄번호 \t 검색내용 \n" ;
+	print $FHW " DIR \t File name \t Function \t call_DIR \t call_program \t line \t find_text \n" ;
 } elsif  ( defined($myopts{t}) ) {
 	$Fn1 = \&inspect_file_2 ;
-	print $FHW " TBL \t COL \t DIR \t 파일명 \t 줄번호 \t 검색내용 \t DML \t 함수명 \n" ;
+	print $FHW " TBL \t COL \t DIR \t File_name \t line \t find_text \t DML \t func_name \n" ;
 } else {
 	$Fn1 = \&inspect_file_new ;
-	print $FHW " 검색항목 \t DIR \t 파일명 \t 줄번호 \t 검색내용 \t DML \t 함수명 \n" ;
+	print $FHW " find_item \t DIR \t File_name \t line \t find_text \t DML \t func_name \n" ;
 }
 
 find($Fn1, @dir);
@@ -126,28 +126,28 @@ find($Fn1, @dir);
 if ( defined($wfile) ) {
   close($FHW) ;
 }
-print  "\n** 작업파일수 ($TOT_CNT)\n" ;
+print  "\n** Number of file ($TOT_CNT)\n" ;
 
 Dawin::Log_end($parm,$TOT_CNT) ;
 
 ###################################
-# 검색항목 1 New
+# find_item 1 New
 ###################################
 sub inspect_file_new {
 	return if ( ( -d || /\.(txt|log|exe|pdf)?$/i || /\d{8,}/ ) && ( ! defined($myopts{a}) ) );
+	return if (( -s $_ ) > 1024 * 1024 * 10 ) ;
 	if ( defined($myopts{e}) ) {
-		return if ( /$exts/ =~ /$_/ ) ;
+		return if ( /(?:$exts)$/i ) ;
 	}
 	if ( defined($myopts{g}) ) {
-		return if ( $_ !~ /($incl)$/) ;
+		return if ( $_ !~ /(?:$incl)$/) ;
 	}
 	if ( defined($myopts{v}) ) {
 		return if ( (stat($_))[9] < $g_std_time) ;
-	}	
+	}
 
-	if (-T or /\.(?:sql|pbl|sr.|pc|java|xml)?$/i)  {
 	$TOT_CNT++;
-	Dawin::PRINT_1($TOT_CNT,$File::Find::name) ; 
+	Dawin::PRINT_1($TOT_CNT,$File::Find::name) ;
  	open (my $FF,"<",$_) or  print STDERR "** ERROR: $_ $!\n" and return ;
 	my $cdir = $File::Find::dir;
 	$cdir =~ s!^(?:$dirs)/?!! ;
@@ -156,6 +156,7 @@ sub inspect_file_new {
 	my ($winnm,  $line, $lsrc, $lscrud,$fnm,$item,$pos,$ln) = ('','','','','');
 	$lsrc=<$FF> ;
 	close $FF;
+	
 	my ($nstr,$cnt) ;
 
 	if ( ! defined($myopts{c}) ) {
@@ -198,13 +199,14 @@ sub inspect_file_new {
 		}
 	}
 	$lsrc =~ s!\\$!!mg ;
-	
+
 	$lsrc =~ /global type (\w+)\s+/ and $winnm = $1 ;
 	while( defined($myopts{i}) ?  $lsrc =~ m!\W($fstr)\W!sigo : $lsrc =~ m!\W($fstr)\W!sgo ) {
 
 		($item,$pos) = ($1,$-[1]) ;
+		next if ($item !~ /[()]/ && /$item/) ;
 		$line = substr($lsrc,$pos-12,130) ;
-	if ($item =~ /^\w+$/) { $line =~ /((?:\w+\.)?$item.+)[;}\n]/s and $line = $1; }
+	if ($item =~ /^\w+$/) { $line =~ /\s((?:\w+\.)?$item.+)[;}\n]/s and $line = $1; }
 		if (defined($myopts{w})) {
 			next unless ($line =~ /\b(?:where|and)\b/i) ;
 		}
@@ -213,36 +215,35 @@ sub inspect_file_new {
   			next unless ($line =~ /(values|decode)/i) ;
   			next if (length($line) < 31) ;
   	}
-		$line =~ s/[\t\r\n]/ /g ;
-		while ($line =~ s/  / / ){}
-  	if (defined($myopts{j})) {
-			from_to($line ,"utf8", "euc-kr") if (is_utf8($line));
-		}
+		$line =~ s/\s\s+/ /sg ;
+
 		$line =~ s/(([\x80-\xff].)*)[\x80-\xff]?$/$1/;
 		$lscrud = "";
-=begin comment		
+		$fnm = "";
+=begin comment
 		if ( substr($lsrc,0,$pos + 8) =~ /.*[;{]/s )
 		{
 			my $imsi = substr($lsrc,$+[0] - 4, $pos + 8) ;
 			$imsi =~ /$regex1/ and $lscrud = uc($1);
 		}
-=cut		
+=cut
 		{ 	substr($lsrc,0,$pos) =~ /$regex1/ and $lscrud = uc($1); }
-		if ( /[p.]c$/i ) 
-		{ 	
+		if ( /[p.]c$/i )
+		{
 			substr($lsrc,0,$pos) =~ /$regex2/ and $fnm = $1 ;
+			$fnm =~ s/\s/ /sg ;
 #			if ( my @tarr = (substr($lsrc,0,$pos) =~ /int\s+(\w+)\s*\([^;]*?\)\s*\{/sg) )
 #				{ $fnm = $tarr[$#tarr]; }
 		}
 
 		$ln =  (substr($lsrc,0,$pos) =~ tr/\n//) ;
 		$ln++ ;
-
+		$item =~ s/\s/ /g;
 		printf $FHW ("%s\t%s\t%s\t$ln\t%s\t%s\t%s\t%s\n",searchW( $item ) , $cdir, $_ , $line , $lscrud, $fnm, $item ) ;
 
     } # while
 
-    } # if end
+  
 }
 
 
@@ -250,18 +251,18 @@ sub inspect_file_2 {
 
 	return if ( ( ! defined($myopts{a}) )  && ( -d || /$IGNORE/  ));
 	if ( defined($myopts{e}) ) {
-		return if ( /$exts/ =~ /$_/ ) ;
+		return if ( /\.(?:$exts)$/ ) ;
 	}
 	if ( defined($myopts{g}) ) {
-		return if ( $_ !~ /(?:$incl)$/ ) ;
+		return unless ( /\.(?:$incl)$/ ) ;
 	}
 	return if ( -s $_ ) > (1024 * 1024 * 10) ;
-	
+
 	if ( defined($myopts{v}) ) {
 		return if ( (stat($_))[9] < $g_std_time) ;
-	}	
+	}
 	$TOT_CNT++;
-	print  "\r** 작업중 ($TOT_CNT): $_"," "x (60 - length($_)) ;
+	Dawin::PRINT_1($TOT_CNT,$_) ;
 
 	if  ( /\.xml/i ) {
 		inspect_xml() ;
@@ -271,10 +272,8 @@ sub inspect_file_2 {
 		inspect_file_c() ;
 		return ;
 	}
-	if( (-T && defined($myopts{a}) or /\.(?:java|jsp|sql)$/i) ) {
-
-#	Dawin::PRINT_1($TOT_CNT,$_) ;
-#	print  "\r** 작업중 ($TOT_CNT): $_"," "x (60 - length($_)) ;
+	
+	return unless( (-T && defined($myopts{a}) or /\.(?:java|jsp|sql)$/i) ) ;
 
   open (my $FF,$_) or  print STDERR "** ERROR: $_ $!\n" and return ;
   my ($cdir, $fcnt,$fchk, $ln,$pos1, $line, $pos2, $s_ln, $lstemp ) ;
@@ -284,6 +283,11 @@ sub inspect_file_2 {
 	local $/;
   	my $ls=<$FF> ;
     close $FF ;
+  my $enc = guess_encoding($ls, qw/euc-kr/);
+  if (ref($enc)) {
+  	from_to($ls, $enc->name,"CP949");
+  }
+
 	my ($nstr,$cnt) ;
 	if ( ! defined($myopts{c}) ) {
 		while ($ls =~ m!(/\*.*?\*/)!s) {
@@ -292,80 +296,68 @@ sub inspect_file_2 {
 			$ls =~ s!!$nstr!s ;
 		}
 	}
-	
+
 	foreach my $kk ( keys %dbHash ) {
 		$pos2 = 0;
 		$s_ln = 0;
 		my ($tbl,$item)  = ( split /\s/,$kk ) ;
 #			print STDERR "$tbl,$item \n";
 		next if (length($tbl) < 2 || length($item) < 2) ;
-#		next unless ( $ls =~ /\b$item\b.*?\b$tbl\b|\b$tbl\b.*?\b$item\b/si ) ;
+
 		$tbl =~ s/\$/\\\$/g ;
 		$item =~ s/\$/\\\$/g ;
 		$line = $ls ;
 		my ($lscrud,$fnm,$val,@tarr) = ('','');
-		while ( $line =~ m!\W($item|$tbl)\W.*?(;|\Z)!si ) {
+		while ( $line =~ m!\W($item|$tbl)\W[^$delim]*?($delim|\z)!si ) {
 			$val = $1;
 			last unless $-[2]  ;
-			my $pp2 += $-[2];
+			my $pp2 = $-[2];
 			$pos1 = $pos2;
 			$pos2 += $pp2;
 
 			if ( uc($val) eq uc($tbl)) {
-				$line = substr($line,$-[1] - 1, $pp2 - $-[1] + 1 ) ;
+				$line = substr($line,$-[1] -1, $pp2 - $-[1] + 1);
 				$pos1 += $-[1];
-				if ($line !~ /\W$item\W/) {
-					$line = substr($ls,$pos2 ) ;
-					next ;
-				}
+				if ($line !~ /$item/i) {$line = substr($ls,$pos2 ) ;	next ;}
 			} else {
-				if (substr($line,0,$-[1]) =~ /.*\n/s) {
-					$line = substr($line, $+[0], $pp2 - $+[0] ) ;
-				} else {
-					$line = substr($line, $-[1], $pp2 - $-[1] ) ;
-				}
-				if ($line !~ /\W$tbl\W/) {
-					$line = substr($ls,$pos2 ) ;
-					next ;
-				}
+				substr($line,0,$-[1]) =~ /.*\n/s;
+				$line = substr($line,$+[0],$pp2 - $+[0] ) ;
+				$pos1 += $+[0] ;
+				if ($line !~ /$tbl/i) {$line = substr($ls,$pos2 ) ;	next ;}
 			}
-			
+
 			if ( ! defined($myopts{n}) && sql_tblcol($tbl,$item,$line) == 0 ) {
 				$line = substr($ls,$pos2 ) ;
 				next ;
 			}
 
 			$lstemp = substr($ls,0,$pos1) ;
-			$lstemp =~ /$regex1/ and $lscrud = uc($1) ;
-			
+			{ $lstemp =~ /$regex1/ and $lscrud = uc($1) ; }
+			unless ($lscrud) {$lstemp =~ /.*\b(MERGE|SELECT|UPDATE|DELETE|INSERT)\W/si and $lscrud = uc($1);}
 
    		$ln = ($lstemp =~ tr/\n//) + 1 ;
 			$lstemp =~ /.*\n/s ;
 			$line = substr($ls,$+[0],140) ;
-			$line =~ /(.*)[\s;]/s and $line = $1;
-    	
+			$line =~ s/(.*)[\s;}]/$1/s ;
+
     	if (defined($myopts{j})) {
 				from_to($line ,"utf8", "euc-kr") if (is_utf8($line));
 			}
 			$line =~ s/(([\x80-\xff].)*)[\x80-\xff]?$/$1/;
-  		$line =~ s/^\s+|\s+$//;
-  		$line =~ s/\s/ /g;
-  		while ($line =~ s/  / /) {}
+  		$line =~ s/^\s+|\s+$//s;
+  		$line =~ s/\s+/ /sg;
+  		$line =~ s/^--/ --/;
   		printf $FHW ("%s\t%s\t%s\t%d\t%s\t$lscrud\n", $kk ,$cdir, $_ ,$ln ,$line ) ;#if ($s_ln != $ln);
 
   		$s_ln = $ln ;
 			last if ( defined($myopts{s}) ) ;
   		$line = substr($ls,$pos2 ) ;
-		} 
+		}
 	}
-	} # if end
+
 }
 
 sub inspect_file_c {
-	# 우체국 cud 검색시 조회출력프로그램 skip
-	if ( defined( $myopts{u}) and /[RP]\.pc$/  ) {
-		return ;
-	}
 
 	open (my $FF,$_) or  print STDERR "** ERROR: $_ $!\n" and return ;
 	my ($cdir, $lstemp, $fcnt,$fchk, $ln,$pos1, $line, $pos2, $s_ln ) ;
@@ -410,7 +402,7 @@ sub inspect_file_c {
 			$ls =~ s!!$nstr!s ;
 		}
 		while ($ls =~ s!^[\t ]*\#[^#]*?$!!mg) {}
-		
+
 =begin comment
   c	Complement the SEARCHLIST.
   d	Delete found but unreplaced characters.
@@ -427,92 +419,80 @@ sub inspect_file_c {
 	$ls =~ s!\\$!!mg ;
 
 	my $save_f = 0;
-	$ls =~ /\s\w{3,}\s+\w+\s*\([^;={]*?\)\s*[^;]/s and $save_f = $-[0]   ;
+	$ls =~ /\s\w{3,}\s+\w+\s*\([^;={]*?\)\s*[^;]/s  and $save_f = $-[0] ;
+
 	foreach my $kk ( keys %dbHash ) {
 		$pos2 = $save_f;
 		$s_ln = 0;
 		my ($tbl,$item)  = ( split /\s/,$kk ) ;
 
-		next unless ( substr($ls,$save_f) =~ /\b$item\b[^;]*?\b$tbl\b|\b$tbl\b[^;]*?\b$item\b/si ) ;
+		next unless ( $ls =~ /\b$item\b[^;]*?\b$tbl\b|\b$tbl\b[^;]*?\b$item\b/si ) ;
 
 		next if (length($tbl) < 2 || length($item) < 2) ;
-		$tbl =~ s/\$/\\\$/g ;
+		$tbl  =~ s/\$/\\\$/g ;
 		$item =~ s/\$/\\\$/g ;
 		$line = substr($ls,$save_f) ;
 		my ($lscrud,$fnm,$val,@tarr) = ('','') ;
-		while ( $line =~ m!.*?\W($item|$tbl)\W[^;]*?(;|\Z)!si ) {
+		while ( $line =~ m!.*?\W($item|$tbl)\W[^$delim]*?($delim|union|\z)!si ) {
 			$val = $1;
 
 			last unless $-[2] ;
-			my $pp2 = $-[2] ;
+			my $pp2 = $-[2];
 			$pos1 = $pos2 ;
 			$pos2 += $pp2 ;
-			if ( uc($val) eq uc($tbl)) 
-			{
-				$line = substr($line,$-[1] - 1 ,$pp2 - $-[1] + 1 ) ;
-				$pos1 += $-[1] ;			
-			} else
-			{
-				substr($line,0,$-[1]) =~ /.*\n/s ;
-				$line = substr($line,$+[0] ,$pp2 - $+[0] ) ;
-				$pos1 += $+[0] ;
+
+			if ( uc($val) eq uc($tbl)) {
+				$line = substr($line, $-[1] - 1, $pp2 - $-[1] + 1);
+				$pos1 += $-[1];
+			} else {
+				substr($line,0,$-[1]) =~ /.*\n/s;
+				$line = substr($line, $+[0], $pp2 - $+[0]);
+				$pos1 += $+[0];
 			}
 
-			if ( ! defined($myopts{n}) && sql_tblcol($tbl,$item, $line ) == 0 ) {
+			if ( ! defined($myopts{n}) && sql_tblcol($tbl,$item,$line) == 0 ) {
 				$line = substr($ls,$pos2 ) ;
 				next ;
 			}
-				
+
 			$lstemp = substr($ls,$save_f,$pos1 - $save_f) ;
-			
+
 			{ $lstemp =~ /$regex1/ and $lscrud = uc($1) ; }
-			unless ($lscrud) { $line =~ /(MERGE|SELECT|UPDATE|DELETE|INSERT)/si and $lscrud = uc($1) ; }
+			unless ($lscrud) { $line =~ /.*\b(MERGE|SELECT|UPDATE|DELETE|INSERT)\W/si and $lscrud = uc($1) ; }
 #			while ($lstemp =~ s/EXEC\s+SQL\s[^;]*+?;//si) {}
 			{ $lstemp =~ /$regex2/  and $fnm = $1 ;}
-			
+
 			if ( uc($val) eq uc($tbl)) {
-				unless ($line =~ m!.*?\b($item)\b!si) {
-					$line = substr($ls,$pos2 ) ;
-					next ;
+				unless ($line =~ m!.*?\b($item)\b!si) { 
+					$line = substr($ls,$pos2) ;
+					next;
 				}
 				$pos1 += $-[1];
-			} 
-=begin comment	20160713 오류발견		
-			else {
-				if ($lscrud =~ /INSERT|UPDATE/ ) {  # 8/20 추가
-					$line = substr($ls,$pos2 ) ;
-					next ;
-				}
 			}
-=cut
 			$lstemp = substr($ls,0,$pos1) ;
-
 			$lstemp =~ /.*\n/s ;
 
 			$ln = ($lstemp =~ tr/\n//) + 1;
-			
-#			$line = substr($ls,$+[0],140) ;
+
 			substr($ls,$+[0],140) =~ /(.*)[\s;}]/s and $line = $1;
     	if (defined($myopts{j})) {
 				from_to($line ,"utf8", "euc-kr") if (is_utf8($line));
 			}
 			$line =~ s/(([\x80-\xff].)*)[\x80-\xff]?$/$1/;
 			$line =~ s/^[\s,]+|\s+$//s;
-			$line =~ s/\s/ /g;
-			while ($line =~ s/  / /g){}
+			$line =~ s/\s+/ /sg;
 			printf $FHW ("%s\t%s\t%s\t%d\t%s\t%s\t$fnm\n", $kk ,$cdir, $_ ,$ln ,$line, $lscrud ) if ($s_ln != $ln);
-=begin comment    		
+=begin comment
 			if ( defined($wsrc_dir) ) {
 				make_path($wsrc_dir.$cdir);
 				copy($File::Find::name, $wsrc_dir.$cdir.'/'.$_) unless (-f $wsrc_dir.$cdir.'/'.$_ ) ;
 			}
-=cut			
+=cut
   		$s_ln = $ln ;
 			last if ( defined($myopts{s}) ) ;
   		$line = substr($ls,$pos2  ) ;
-		} 
-	}
-
+		} # while end
+  } #foreach end
 }
 
 sub inspect_xml {
@@ -543,12 +523,12 @@ sub inspect_xml {
 			undef $pos ;
 			foreach my $item ( split /\t/,$kk ) {
 				$fcnt++ ;
-  				if ($ls =~ /\W$item\W/s) {
-  					$fchk++ ; 
-  					$pos = $-[0] if ( !defined($pos) or $pos > $-[0]); 
-  				} 
+  				if ($ls =~ /\b$item\b/s) {
+  					$fchk++ ;
+  					$pos = $-[0] if ( !defined($pos) or $pos > $-[0]);
+  				}
 			}
-			
+
 			if ($fcnt > 0 and $fcnt == $fchk) {
   				$line = substr($ls,$pos,100) ;
 	    	if (defined($myopts{j})) {
@@ -557,8 +537,7 @@ sub inspect_xml {
 				$line =~ s/(([\x80-\xff].)*)[\x80-\xff]?$/$1/;
   				$line =~ s!^\s+|\s+$!! ;
 
-  				$line =~ s/\s/ /g;
-    			$line =~ s/  / /g;
+  				$line =~ s/\s+/ /g;
 				my $lscrud = '';
 				{ $ls =~ /\b(SELECT|UPDATE|DELETE|INSERT)\b/i and $lscrud = uc($1); }
 
@@ -569,7 +548,7 @@ sub inspect_xml {
     }
     close ($FF) ;
 }
-# 예외파일목록 
+# exclude file
 sub except_const {
     my $sfile = shift;
 	if (-e $sfile) {
@@ -581,7 +560,7 @@ sub except_const {
 		$exts =~ tr/,/|/ ;
 	}
 }
-# 포함파일목록 
+# include file
 sub include_const {
     my $sfile = shift;
 	if (-e $sfile) {
@@ -607,7 +586,7 @@ sub searchW {
 sub hash_const {
 
     chomp(@Tlist);
-    
+
     @Tlist = sort {length($b) <=> length($a)} @Tlist ;
 	if (defined($myopts{m}) ) {
 		$fstr = join ("|",map { SELECT_ALL.$_.'|'.$_.INSERT_ALL.'|INSERT\s+INTO\s+'.$_.'\s+\(?\s+SELECT' } @Tlist ) ;
@@ -625,14 +604,13 @@ sub hash_const_2item {
     open(my $sfh,"<", $sfile) || die "$sfile $! \n";
     while(<$sfh>)
     {
-    	next if (/DIR.+검색내용/) ;
       chomp;
       @items = split(/\s+/, $_);
       @items = Dawin::trim(@items);
 		  next if (scalar(@items) < 2) ;
     	$dbHash{$items[0]."\t".$items[1]} = "1" ;
     }
-    
+
     close($sfh);
 #    my (@lstA, @lstB) ;
 #    for my $kk (keys %dbHash) {
@@ -648,13 +626,13 @@ sub read_funcName {
     open(my $INF,"<",$sfile) or die "$! \n";
 	$fstr = '';
 	<$INF> ;
-	
+
   print "read_funcName: ", $sfile,"\n" ;
 	my ($ldir,$pgid,$fname,$dname) ;
     while (<$INF>)
     {
       chomp;
-      if ( defined($myopts{t}) ) 
+      if ( defined($myopts{t}) )
       {
       	($ldir,$pgid,$fname) = (split(/\t/, $_))[2,3,7]  or (split(/\t/, $_))[1,2,6]  or next;
       }
@@ -670,14 +648,13 @@ sub read_funcName {
 	$fstr = join ("|",keys %fnHash) ;
     print  "read_funcName e: ", scalar(keys %fnHash ),"\n" ;
     close ($INF);
-	
 
 }
 
 sub inspect_func {
 	return unless (/\.(?:pc|java)/i) ;
 	$TOT_CNT++;
-	Dawin::PRINT_1($TOT_CNT,$_) ; 
+	Dawin::PRINT_1($TOT_CNT,$_) ;
 
 	my ( $src,$cdir,$item,$pos, $ln,$line,$ldir,$pgid ) ;
 	local $/;
@@ -729,7 +706,7 @@ sub inspect_func {
 sub search_func_call {
 	return unless (/\.(?:pc|java)/i) ;
 	$TOT_CNT++;
-	Dawin::PRINT_1($TOT_CNT,$_) ; 
+	Dawin::PRINT_1($TOT_CNT,$_) ;
 	my ($pgid) = split('\.',$_) ;
 	my ( $src,$src1,$cdir,$item,$pos, $ln,$line,$ldir ) ;
 	local $/;
@@ -785,7 +762,7 @@ sub sql_tblcol {
 	while ($pstr =~ s/--.*$//mg) {}
 	while ($pstr =~ s/''\s+\w+| as\s+\w+/ /si) {}
 	while ($pstr =~ s/\'(?:$col|$tbl)\'/ /sg) {}
-	
+
 	while ($pstr =~ /\(([^()]{3,}?)\)/s) {
 		$lstr = $1 ;
 		while ($lstr =~ /\sunion\s/i) {
@@ -813,39 +790,43 @@ sub sql_tblcol {
 sub HELP_MESSAGE{
   die <<'END';
 
-검색항목값이 사용된 프로그램을 찾는다.
-Usage: $0 [-acijkmnst][-o 결과파일][-d 검색DIR] [-v 임의파일 ] [-f 검색항목파일] [-e 제외파일] [-g 포함파일]
+텍스트 파일 검색
 
- -a : 모든파일을 검색대상으로 함
- -c : 주석포함검색
- -d : 검색DIR ( 생략시 현재 디렉토리 검색 )
- -t : 테이블,칼럼 2항목으로 검색(없으면 1항목검색)
+Usage: $0 [-acijkmnst][-o 결과파일][-d find DIR] [-v 기준파일] [-f 검색항목파일] [-e 제외파일] [-g 검색대상파일]
+
+OPTION
+ -a : 모든파일검색
+ -c : 주석내용도 검색
+ -d : 검색대상DIR (생략시 현재 DIR)
+ -e : 검색제외파일 확장자( ex : -e txt,log )
+ -g : 검색대상파일 확장자( ex : -g txt,log )
  -i : 대소문자 무시
- -j : utf8 => euc-kr 변환
- -k : 검색결과의 함수를 사용하는 파일 검색 -kt, -k
+ -j : utf8 => euc-kr ???
+ -k : 검색결과의 함수를 사용하는 파일검색 -kt, -k
  -m : SELECT * INSERT * 검색
  -q : SELECT * INSERT * 검색(java,xml)
- -s : 최소검색 ( 동일내용은 1회만 표시 )
- -n : 퀴리분석안함 ( 단순검색 )
- -f 검색파일 : 검색값이 기록된 텍스트 파일
- -o 결과파일 : 지정한 파일로 검색결과 파일 생성. 
- -v 임의파일 : 임의파일 이전 변경된 파일 무시 
- 검색항목파일 : 각각의 검색항목을 라인별로 분리
-   예)
-     검색항목1
-     검색항목2
-     .
-     .
-     검색항목n
+ -n : SQL분석 안함
+ -o : 검색결과값을 기록할 파일명 (지정하지 않으면 화면출력됨)
+ -s : 최소검색(동일내용은 1회만 표시)
+ -r : 문단구분자 ( 기본값 ;)
+ -t : 검색항목 2개 ( Table명, column명)
+ -v : 기준파일 ( 이 파일이후 수정또는 생성된 파일만 검색 )
+ -f : 검색항목파일 
 
-   * -t 옵션을 주었을 경우는 칼럼과 테이블명을을 지정한다.
-     테이블명1 칼럼항목1 
-     테이블명2 칼럼항목2 
+  검색항목파일내용)
+		검색값1
+		검색값2
+		.
+		.
+		검색값n
+				
+   * -t 옵션을 사용시
+     테이블명1	컴럼명1
+     테이블명1	컴럼명2
+     테이블명2	컴럼명1
      .
-     .    
-     테이블명n 칼럼항목n 
-
-검색DIR은 생략시 현재DIR에서 검색시작함.
+     .
+     테이블명n	컴럼명n
 
 END
 }

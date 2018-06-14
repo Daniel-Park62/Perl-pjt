@@ -1,5 +1,12 @@
 
 *.bak
+=======
+# my
+*.log
+*.bak
+QI0_*
+testd/
+
 # Windows image file caches
 Thumbs.db
 ehthumbs.db
