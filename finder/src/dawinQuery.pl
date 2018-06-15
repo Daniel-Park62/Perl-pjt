@@ -48,7 +48,7 @@ $dir = $myopts{d} || getcwd() ;
 
 if ( defined($myopts{f}) ) {
 	$sfile = $myopts{f} ;
-	die "!! $sfile 를 찾을수 없습니다." unless -e $sfile;
+	die "!! 파일($sfile)을 찾을 수 없습니다." unless -e $sfile;
 	hash_const($sfile) ;
 	$wfile = $odir.'/QI0_'.basename($sfile) ;
 } else {
@@ -113,22 +113,6 @@ for my $incl (keys (%hINCL)) {
 print "\n** 작업파일수 ($TOT_CNT)\n" ;
 
 close($FHW) ;
-
-=begin comment
-my $eltm = localtime ;
-my $end = time;
-my $diff = $end - $start;
-
-open(my $FLOG,">>",$logfile) || die "$logfile $! \n";
-$FLOG->autoflush() ;
-
-printf ("\n***   End $0 : $eltm ## 소요시간 : %d시간 %d분 %d초 .\n",$diff/3600, int $diff%3600/60, $diff%60) ;
-print  $FLOG   ("\n*** Start $0 : $sltm $sdir\n( $opts )") ;
-print  $FLOG   ("\n** 작업파일수 ($TOT_CNT)") ;
-printf $FLOG   ("\n***   End $0 : $eltm : $sfile  ## 소요시간 : %d시간 %d분 %d초 .\n",$diff/3600, int $diff%3600/60, $diff%60) ;
-
-close($FLOG);
-=cut
 
 out_actionJsp();
 SKIP_Q0:
@@ -195,12 +179,9 @@ sub print_if_file {
   		next unless $QID ;
   		if ($line =~ m{<include\s+refid=\"([\w.]+)\"}) {  # 20151102 include를 찾기 위함
   			my $lval = $1;
-	    	if (defined($myopts{j})) {
-					from_to($line ,"utf8", "euc-kr") if (is_utf8($line));
-				}
+				from_to($line ,"utf8", "euc-kr") if (defined($myopts{j}));
   			$line =~ s/(([\x80-\xff].)*)[\x80-\xff]?$/$1/;
-				$line =~ s/\s/ /g;
-				$line =~ s/  / /g;
+				$line =~ s/\s+/ /sg;
   			
   			if ($lval =~ /\./)
   				{$hINCL{$lval}{$.} = "$dir\t$_\t$.\t$line" ;}
@@ -212,9 +193,7 @@ sub print_if_file {
 			next if $#sTbl == -1 ;
 			chomp($line);
 			$line =~ s/^\s+//;
-    	if (defined($myopts{j})) {
-				from_to($line ,"utf8", "euc-kr") if (is_utf8($line));
-			}
+			from_to($line ,"utf8", "euc-kr") if (defined($myopts{j}));
 	  	$line =~ s/(([\x80-\xff].)*)[\x80-\xff]?$/$1/;
 			$line =~ s/[\t\r]/ /g;
 			foreach my $kk ( @sTbl ) {
@@ -260,12 +239,9 @@ sub inspect_file {
 			$ls .= $line ;
   		if ($line =~ m{<include\s+refid=\"([\w.]+)\"}) {  # 20151102 include를 찾기 위함
   			my $lval = $1;
-	    	if (defined($myopts{j})) {
-					from_to($line ,"utf8", "euc-kr") if (is_utf8($line));
-				}
+				from_to($line ,"utf8", "euc-kr") if (defined($myopts{j}));
   			$line =~ s/(([\x80-\xff].)*)[\x80-\xff]?$/$1/;
-				$line =~ s/\s/ /g;
-				$line =~ s/  / /g;
+				$line =~ s/\s+/ /sg;
   			
   			if ($lval =~ /\./)
   				{ $hINCL{$lval}{$.} = "$cdir\t$_\t$.\t$line\t$fqid\t\t0\t" ; }
@@ -292,12 +268,10 @@ sub inspect_file {
 				$line = substr($ls,$+[0],140) ;
 				$line =~ s/(.*)\s/$1/;
 				$line =~ s/^\s+|\s+$//sg;
-	    	if (defined($myopts{j})) {
-					from_to($line ,"utf8", "euc-kr") if (is_utf8($line));
-				}
+				from_to($line ,"utf8", "euc-kr") if (defined($myopts{j}));
   			$line =~ s/(([\x80-\xff].)*)[\x80-\xff]?$/$1/;
-				$line =~ s/\s/ /g;
-				while ($line =~ s/  / /g){}
+				$line =~ s/\s+/ /sg;
+				
 				my $lscrud = '';
 				{ $ls =~ /\b(SELECT|UPDATE|DELETE|INSERT)\b/i and $lscrud = uc($1); }
 				$kk =~ s/\s+/\t/ ;
@@ -325,13 +299,11 @@ sub java_if_file {
 			my @sTT = ();
 			@sTT = ($line =~ /[\s\W]($fstrA)[\s\W]/igo) ;
 			next if $#sTT == -1 ;
-    	if (defined($myopts{j})) {
-				from_to($line ,"utf8", "euc-kr") if (is_utf8($line));
-			}
+
+			from_to($line ,"utf8", "euc-kr") if (defined($myopts{j}));
 			$line =~ s/(([\x80-\xff].)*)[\x80-\xff]?$/$1/;
 			$line =~ s/^\s+|\s+$//g;
-			$line =~ s/\s/ /g;
-			$line =~ s/  / /g;
+			$line =~ s/\s+/ /sg;
 
 			foreach my $kk ( @sTT ) {
 				printf $FHW ("%s\t%s\t%s\t%d\t%s\n", searchW( $kk ),$cdir, $_ , $. , $line) if $kk;
@@ -382,8 +354,8 @@ sub inspect_java_file {
 
 #			$pos2 += $-[0] if $line =~ /\n/ ;
 
-			while ($line =~ qr!.*(}|\Z)!s) {
-				$line = substr( $line,0,$-[1] ) ;
+			while ($line =~ qr!(?>.*)(}|\Z)!s) {
+				$line = substr( $line,0,$-[1] - 1 ) ;
 				$lcnt = ($line =~ tr/{//);
 				$rcnt = ($line =~ tr/}//);
 				last if ( $lcnt  == $rcnt ) ;
@@ -411,7 +383,7 @@ sub inspect_java_file {
 #			  if ( my @marr = ($line =~ /\s+public\s+[^({=]*?\s+(\w+)\s*\(/sgo)) { $method =  $marr[$#marr]; $method = '' if ($method eq 'main') ;}
 #			}
 			$method = "";
-			{ $line =~ /.*\spublic\s+[^({=]*?\s+\(/so and $method = $1 ; }
+			{ $line =~ /(?>.*)\spublic\s+[^({=]*?\s+(\w{5,})\s*\(/so and $method = $1 ; }
 			$lscrud = "";
 			{ $line =~ /.*\b(SELECT|UPDATE|DELETE|INSERT|MERGE)/si and $lscrud = $1 ;}
 
@@ -421,12 +393,10 @@ sub inspect_java_file {
 			$line = substr($ls,$+[0],140) ;
 			$line =~ s/(.*)\s/$1/;
 			$line =~ s/^\s+|\s+$//g;
-    	if (defined($myopts{j})) {
-				from_to($line ,"utf8", "euc-kr") if (is_utf8($line));
-			}
+    	
+			from_to($line ,"utf8", "euc-kr") if (defined($myopts{j}));
 			$line =~ s/(([\x80-\xff].)*)[\x80-\xff]?$/$1/;
-			$line =~ s/\s/ /g;
-			$line =~ s/  / /g;
+			$line =~ s/\s+/ /sg;
     		
 			$method = '' unless $method ;
 			printf $FHW ("$tbl\t$item\t%s\t%s\t%d\t%s\t%s\t%s\t0\t$lscrud\n", $cdir, $_ ,$ln ,$line, substr($_,0,-5), $method ) if ($s_ln != $ln);
